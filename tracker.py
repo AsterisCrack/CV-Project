@@ -55,8 +55,8 @@ class Tracker:
             mask = cv2.inRange(img, lower, upper)
 
         elif self.color == 'green':
-            lower = np.array([50, 100, 20])
-            upper = np.array([70, 255, 255])
+            lower = np.array([45, 100, 20])
+            upper = np.array([76, 255, 255])
             mask = cv2.inRange(img, lower, upper)
 
         elif self.color == 'yellow':
