@@ -8,12 +8,13 @@ from picamera2 import Picamera2
 
 #Tracker class
 class Tracker:
-    def __init__(self, buffer=64, video=None, color='red', min_radius=10, using_raspberri=True):
+    def __init__(self, buffer=64, video=None, color='red', min_radius=10, using_raspberri=True, on_new_frame_function=None):
         self.buffer = buffer
         self.video = video
         self.color = color
         self.min_radius = min_radius
         self.using_raspberri = using_raspberri
+        self.on_new_frame_function = on_new_frame_function
         self.pts = deque(maxlen=self.buffer)
         self.init_camera()
     
@@ -135,6 +136,8 @@ class Tracker:
         center, radius, centroid = self.get_center(mask)
         if center is not None:
             self.pts.appendleft(center)
+            if self.on_new_frame_function is not None:
+                self.on_new_frame_function(center)
             return self.paint_frame(hsv, center, radius, centroid)
         return cv2.flip(cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR), 1)
     

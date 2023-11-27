@@ -23,7 +23,8 @@ class ServoController:
         self.angle = angle
         duty = self.angle_to_duty(angle)
         self.pwm.ChangeDutyCycle(duty)
-        time.sleep(0.3)
+        time.sleep(1)
+        self.pwm.set_PWM_dutycycle( servo, 0 )
 
     def get_angle(self):
         return self.angle
@@ -36,7 +37,8 @@ class ServoController:
         self.cleanup()
 
 if __name__ == '__main__':
-    servo = ServoController(18)
+   #Using pins 22 and 27 
+    servo = ServoController(22)
     try:
         while True:
             angle = float(input('angle: '))
