@@ -4,25 +4,35 @@ import sys
 import time
 import argparse
 from collections import deque
+from picamera2 import Picamera2
 
 #Tracker class
 class Tracker:
-    def __init__(self, buffer=64, video=None, color='red', min_radius=10):
+    def __init__(self, buffer=64, video=None, color='red', min_radius=10, using_raspberri=True):
         self.buffer = buffer
         self.video = video
         self.color = color
         self.min_radius = min_radius
+        self.using_raspberri = using_raspberri
         self.pts = deque(maxlen=self.buffer)
         self.init_camera()
     
     def init_camera(self):
         if not self.video:
-            self.camera = cv2.VideoCapture(0)
+            if self.using_raspberri:
+                self.camera = Picamera2()
+                self.camera.preview_configuration.main.size=(1280, 720)
+                self.camera.preview_configuration.main.format="RGB888"
+                self.camera.preview_configuration.align()
+                self.camera.configure("preview")
+                self.camera.start()
+            else:
+                self.camera = cv2.VideoCapture(0)
         else:
             self.camera = cv2.VideoCapture(self.video)
         time.sleep(2.0)
 
-    def get_frame(self):
+    def get_frame_normal(self):
         #Grab the current frame
         (grabbed,frame)=self.camera.read()
 
@@ -31,6 +41,13 @@ class Tracker:
             return None
 
         #Resize the frame,blur it and convert it to the HSV color space
+        frame=cv2.resize(frame,(600,400))
+        blurred=cv2.GaussianBlur(frame,(11,11),0)
+        hsv=cv2.cvtColor(blurred,cv2.COLOR_BGR2HSV)
+        return hsv
+    
+    def get_frame_raspi(self):
+        frame = self.camera.capture_array()
         frame=cv2.resize(frame,(600,400))
         blurred=cv2.GaussianBlur(frame,(11,11),0)
         hsv=cv2.cvtColor(blurred,cv2.COLOR_BGR2HSV)
@@ -110,7 +127,10 @@ class Tracker:
         return frame
     
     def track_single_frame(self):
-        hsv = self.get_frame()
+        if self.using_raspberri:
+            hsv = self.get_frame_raspi()
+        else:
+            hsv = self.get_frame_normal()
         mask = self.get_mask(hsv)
         center, radius, centroid = self.get_center(mask)
         if center is not None:
@@ -128,8 +148,11 @@ class Tracker:
                 break
     
     def close(self):
-        self.camera.release()
-        cv2.destroyAllWindows()
+        if self.using_raspberri:
+            self.camera.stop()
+        else:
+            self.camera.release()
+            cv2.destroyAllWindows()
 
     def __del__(self):
         self.close()
@@ -138,13 +161,14 @@ class Tracker:
 if __name__ == "__main__":
     #Construct the argument parse and parse the arguments
     ap=argparse.ArgumentParser()
+    ap.add_argument("-rpi","--raspberri",type=bool,default=True,help="uses the raspberry pi camera")
     ap.add_argument("-v","--video",help="path to the (optional) video file")
     ap.add_argument("-b","--buffer",type=int,default=64,help="max buffer size")
     ap.add_argument("-c","--color",type=str,default='red',help="color to track")
     ap.add_argument("-r","--min-radius",type=int,default=10,help="minimum radius of the object to track")
     args=vars(ap.parse_args())
     
-    tracker = Tracker(args['buffer'], args['video'], args['color'], args['min_radius'])
+    tracker = Tracker(args['buffer'], args['video'], args['color'], args['min_radius'], args['raspberri'])
     tracker.track()
     tracker.close()
 
