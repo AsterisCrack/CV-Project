@@ -137,7 +137,7 @@ class Tracker:
         if center is not None:
             self.pts.appendleft(center)
             if self.on_new_frame_function is not None:
-                self.on_new_frame_function(center)
+                self.on_new_frame_function(centroid)
             return self.paint_frame(hsv, center, radius, centroid)
         return cv2.flip(cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR), 1)
     
