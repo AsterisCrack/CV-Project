@@ -5,6 +5,7 @@ from gpiozero.pins.pigpio import PiGPIOFactory
 from simple_pid import PID
 from tracker import Tracker
 import RobotControl.remove_servo_jitter as remove_jitter
+import RobotControl.led_controller as led_controller
 import time
 import math
 
@@ -16,6 +17,10 @@ INVERT_X = True
 INVERT_Y = True
 PIN_X = 22
 PIN_Y = 27
+COLOR = "blue"
+BRIGHTNESS = 20
+global obj_detected 
+obj_detected = False
 
 if __name__ == '__main__':
    
@@ -30,10 +35,11 @@ if __name__ == '__main__':
     def move_robot(center):
         #Moves the robot to point at the center of the object
         # center is a tuple (x, y)
-        # 
+        
         if center is None:
             servo_x.value = 0
             servo_y.value = 0
+            led_controller.change_effect("breathe")
             return
         
         error_x = (center[0] - 320) / 320
@@ -55,10 +61,13 @@ if __name__ == '__main__':
 
         servo_x.value = angle_x
         servo_y.value = angle_y
-        print("x: ", error_x, "y: ", error_y)
-        print("angle_x: ", angle_x, "angle_y: ", angle_y)
+        led_controller.change_effect("static_color")
 
-    tracker = Tracker(on_new_frame_function=move_robot, color="blue")
+   #Set up LEDs
+    led_controller.change_brightness(BRIGHTNESS)
+    led_controller.change_color(COLOR)
+    led_controller.change_effect("breathe")
+    tracker = Tracker(on_new_frame_function=move_robot, color=COLOR)
     
    #Wait for key when ready
     input("Press enter to start tracking")
