@@ -50,7 +50,7 @@ if __name__ == "__main__":
         cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         password_loop = cam.process_video()
 
-    camera = cam.get_camera()
+    camera = cam.getCamera()
     cam.end_program(stop_cam=False)
     # delete the camera object to free up memory
     del cam
