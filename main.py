@@ -22,9 +22,6 @@ from gpiozero.pins.pigpio import PiGPIOFactory
 from simple_pid import PID
 from tracker import Tracker
 import RobotControl.remove_servo_jitter as remove_jitter
-import RobotControl.led_controller as led_controller
-
-
 
 if __name__ == "__main__":
     # The program starts by creating the camera object in order to detect the password.
@@ -65,8 +62,7 @@ if __name__ == "__main__":
     robot = Robot_Controller(INVERT_X=INVERT_X, INVERT_Y=INVERT_Y, 
                              servo_x=servo_x, servo_y=servo_y, 
                              pid_x=PID_x, pid_y=PID_y, 
-                             COLOR=COLOR, BRIGHTNESS=BRIGHTNESS,
-                             leds=led_controller)
+                             COLOR=COLOR, BRIGHTNESS=BRIGHTNESS)
 
     robot.start(Tracker)
 
