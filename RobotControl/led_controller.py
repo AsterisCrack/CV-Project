@@ -151,7 +151,19 @@ def start_effect(effect, color=None, do_not_change_effect=False):
 
 def stop_effect():
     global effect_thread
-    if str(effect_thread) != "breathe":
+    if str(effect_thread) == "breathe":
+        print("Stopping effect")
         effect_thread.stop()
+        print("Waiting for thread to stop")
         effect_thread.join()
+        print("Thread stopped")
         effect_thread = None
+
+def stop_all():
+    global effect_thread
+    stop_effect()
+    pixels.fill((0,0,0))
+    pixels.show()
+   #Stop neopixel
+    pixels.deinit() 
+    print("Neopixel stopped")
