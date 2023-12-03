@@ -50,7 +50,8 @@ if __name__ == "__main__":
         cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         password_loop = cam.process_video()
 
-    cam.end_program()
+    camera = cam.get_camera()
+    cam.end_program(stop_cam=False)
     # delete the camera object to free up memory
     del cam
     
@@ -59,7 +60,7 @@ if __name__ == "__main__":
     robot = Robot_Controller(INVERT_X=INVERT_X, INVERT_Y=INVERT_Y, 
                              servo_x=servo_x, servo_y=servo_y, 
                              pid_x=PID_x, pid_y=PID_y, 
-                             COLOR=COLOR)
+                             COLOR=COLOR, camera=camera)
 
     robot.start(Tracker)
 

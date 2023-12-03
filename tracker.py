@@ -8,7 +8,7 @@ from picamera2 import Picamera2
 
 #Tracker class
 class Tracker:
-    def __init__(self, buffer=64, video=None, color='red', min_radius=10, using_raspberri=True, on_new_frame_function=None):
+    def __init__(self, buffer=64, video=None, color='red', min_radius=10, using_raspberri=True, on_new_frame_function=None, camera=None):
         self.buffer = buffer
         self.video = video
         self.color = color
@@ -16,7 +16,10 @@ class Tracker:
         self.using_raspberri = using_raspberri
         self.on_new_frame_function = on_new_frame_function
         self.pts = deque(maxlen=self.buffer)
-        self.init_camera()
+        if camera is not None:
+            self.camera = camera
+        else:
+            self.init_camera()
     
     def init_camera(self):
         if not self.video:

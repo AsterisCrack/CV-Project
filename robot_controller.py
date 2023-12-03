@@ -14,13 +14,13 @@ class Robot_Controller:
                  INVERT_X: bool = True, INVERT_Y: bool = True, 
                  servo_x = None, servo_y = None, 
                  pid_x = None, pid_y = None,                 
-                 COLOR: str = "blue"
+                 COLOR: str = "blue", camera = None
                  ):
         
         self.INVERT_X = INVERT_X
         self.INVERT_Y = INVERT_Y
 
-    
+
         self.COLOR = COLOR
         self.obj_detected = False
         self.start_control = False
@@ -32,6 +32,7 @@ class Robot_Controller:
         self.PID_x = pid_x #PID(0.1, 1, 0.005, output_limits=(-1, 1), setpoint=0, starting_output=0)
         self.PID_y = pid_y #PID(0.075, 0.75, 0.005, output_limits=(-0.5, 0.5), setpoint=0, starting_output=0)
 
+        self.camera = camera
 
     def move_robot(self, center):
         #Moves the robot to point at the center of the object
@@ -63,7 +64,7 @@ class Robot_Controller:
         self.servo_y.value = angle_y
 
     def setup(self, tracker_obj):
-        self.tracker = tracker_obj(on_new_frame_function=self.move_robot, color=self.COLOR)
+        self.tracker = tracker_obj(on_new_frame_function=self.move_robot, color=self.COLOR, camera=self.camera)
 
     def start(self, tracker_obj):
         print("Tracker startup")

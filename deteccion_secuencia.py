@@ -78,6 +78,9 @@ class Camera:
 
         self.cam_obj = cam
 
+    def getCamera(self):
+        return self.cam_obj
+    
     def get_frame(self)-> np.ndarray:
         """
         Gets a frame from the camera and returns it as an image.
@@ -94,13 +97,14 @@ class Camera:
 
         return frame
     
-    def end_program(self) -> None:
+    def end_program(self, stop_cam=True) -> None:
         """
         Ends the program by closing all the windows and stopping the camera.
         """
         cv2.destroyAllWindows()
         
-        self.stop_camera()
+        if stop_cam:
+            self.stop_camera()
 
     def stop_camera(self) -> None:
         """
