@@ -1,36 +1,42 @@
+from typing import Any
 import cv2
 import numpy as np
 from time import time
 #from picamera2 import PiCamera
 
-# define the lower and upper bounds of the colors in the HSV color space
-RED_LOWER_BOUND_1 = np.array([0, 100, 20])
-RED_UPPER_BOUND_1 = np.array([10, 255, 255])
-RED_LOWER_BOUND_2 = np.array([160,100,20])
-RED_UPPER_BOUND_2 = np.array([179,255,255])
-"""
-Because red is the color at the beginning/end of the color circle in the HSV
-color space, we may want to define two ranges for red, one for the beginning
-and one for the end of the color circle, so that we can detect colors at either end
-of the color spectrum.
-"""
+class Password_program_constants:
+    """
+    This class contains the constants used throughout the program.
+    """
+    def __init__(self) -> None:
+        # define the lower and upper bounds of the colors in the HSV color space
+        self.RED_LOWER_BOUND_1 = np.array([0, 100, 20])
+        self.RED_UPPER_BOUND_1 = np.array([10, 255, 255])
+        self.RED_LOWER_BOUND_2 = np.array([160,100,20])
+        self.RED_UPPER_BOUND_2 = np.array([179,255,255])
+        """
+        Because red is the color at the beginning/end of the color circle in the HSV
+        color space, we may want to define two ranges for red, one for the beginning
+        and one for the end of the color circle, so that we can detect colors at either end
+        of the color spectrum.
+        """
 
-BLUE_LOWER_BOUND = np.array([100, 100, 20])
-BLUE_UPPER_BOUND = np.array([120, 255, 255])
+        self.BLUE_LOWER_BOUND = np.array([100, 100, 20])
+        self.BLUE_UPPER_BOUND = np.array([120, 255, 255])
 
-GREEN_LOWER_BOUND = np.array([45, 100, 20])
-GREEN_UPPER_BOUND = np.array([76, 255, 255])
+        self.GREEN_LOWER_BOUND = np.array([45, 100, 20])
+        self.GREEN_UPPER_BOUND = np.array([76, 255, 255])
 
-YELLOW_LOWER_BOUND = np.array([20, 100, 20])
-YELLOW_UPPER_BOUND = np.array([40, 255, 255])
+        self.YELLOW_LOWER_BOUND = np.array([20, 100, 20])
+        self.YELLOW_UPPER_BOUND = np.array([40, 255, 255])
 
 
-SQUARE_ASPECT_RATIO_TOLERANCE = 0.05 # how far off the aspect ratio of a cuadrilateral
-# can be from 1.0 (a square) and still be considered a square. 
+        self.SQUARE_ASPECT_RATIO_TOLERANCE = 0.05 # how far off the aspect ratio of a cuadrilateral
+        # can be from 1.0 (a square) and still be considered a square. 
 
-TOLERANCE_DEFECT_POLYGON_CONTOUR = 0.1 # how far off the approximation of a polygon
+        self.TOLERANCE_DEFECT_POLYGON_CONTOUR = 0.1 # how far off the approximation of a polygon
 
-TIME_TO_DETECT = 5 # the time in seconds the program has to detect the next shape once it has detected a shape of the pattern
+        self.TIME_TO_DETECT = 5 # the time in seconds the program has to detect the next shape once it has detected a shape of the pattern
 
 
 
@@ -46,6 +52,7 @@ class Camera:
         Returns:
             object: an object of the camera class
         """
+        self.constants = Password_program_constants()
         self.type = type
         self.frameWidth = 1280
         self.frameHeight = 720
@@ -125,7 +132,6 @@ class Camera:
         """
         self.color_sequence_index = 0
         
-
     def process_red_video(self) -> bool:
         """
         Function that tries to detect a red rectangle in the video feed. We define a 
@@ -144,8 +150,8 @@ class Camera:
         frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
         # create a mask for the red color
-        mask1 = cv2.inRange(frame_hsv, RED_LOWER_BOUND_1, RED_UPPER_BOUND_1)
-        mask2 = cv2.inRange(frame_hsv, RED_LOWER_BOUND_2, RED_UPPER_BOUND_2)
+        mask1 = cv2.inRange(frame_hsv, self.constants.RED_LOWER_BOUND_1, self.constants.RED_UPPER_BOUND_1)
+        mask2 = cv2.inRange(frame_hsv, self.constants.RED_LOWER_BOUND_2, self.constants.RED_UPPER_BOUND_2)
         mask = cv2.bitwise_or(mask1, mask2)
 
         # apply the mask to the frame
@@ -164,7 +170,7 @@ class Camera:
             largest_contour = max(contours, key=cv2.contourArea)
 
             # approximate the contour with a polygon
-            epsilon = TOLERANCE_DEFECT_POLYGON_CONTOUR * cv2.arcLength(largest_contour, True)
+            epsilon = self.constants.TOLERANCE_DEFECT_POLYGON_CONTOUR * cv2.arcLength(largest_contour, True)
             approx = cv2.approxPolyDP(largest_contour, epsilon, True)
 
             # check if the polygon is a rectangle
@@ -174,7 +180,7 @@ class Camera:
 
                             
                 aspect_ratio = max(float(w) / h, float(h) / w)
-                if aspect_ratio < (1-SQUARE_ASPECT_RATIO_TOLERANCE) or aspect_ratio > (1+SQUARE_ASPECT_RATIO_TOLERANCE):
+                if aspect_ratio < (1-self.constants.SQUARE_ASPECT_RATIO_TOLERANCE) or aspect_ratio > (1+self.constants.SQUARE_ASPECT_RATIO_TOLERANCE):
                     print("Red rectangle detected! Press SPACE to continue")
                     return True
         return False
@@ -193,7 +199,7 @@ class Camera:
 
         frame_HSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-        mask = cv2.inRange(frame_HSV, BLUE_LOWER_BOUND, BLUE_UPPER_BOUND)
+        mask = cv2.inRange(frame_HSV, self.constants.BLUE_LOWER_BOUND, self.constants.BLUE_UPPER_BOUND)
         blue_frame = cv2.bitwise_and(frame, frame, mask=mask)
         blue_frame = cv2.cvtColor(blue_frame, cv2.COLOR_BGR2GRAY)
         _, blue_binary = cv2.threshold(blue_frame, 127, 255, cv2.THRESH_BINARY)
@@ -201,12 +207,12 @@ class Camera:
 
         if len(contours) > 0:
             largest_contour = max(contours, key=cv2.contourArea)
-            epsilon = TOLERANCE_DEFECT_POLYGON_CONTOUR * cv2.arcLength(largest_contour, True)
+            epsilon = self.constants.TOLERANCE_DEFECT_POLYGON_CONTOUR * cv2.arcLength(largest_contour, True)
             approx = cv2.approxPolyDP(largest_contour, epsilon, True)
             if len(approx) == 4:
                 x, y, w, h = cv2.boundingRect(approx)
                 aspect_ratio = max(float(w) / h, float(h) / w)
-                if aspect_ratio > (1-SQUARE_ASPECT_RATIO_TOLERANCE) and aspect_ratio < (1+SQUARE_ASPECT_RATIO_TOLERANCE):
+                if aspect_ratio > (1-self.constants.SQUARE_ASPECT_RATIO_TOLERANCE) and aspect_ratio < (1+self.constants.SQUARE_ASPECT_RATIO_TOLERANCE):
                     print("Blue square detected! Press SPACE to continue")
                     return True
 
@@ -225,7 +231,7 @@ class Camera:
         cv2.imshow("frame", frame)
 
         frame_HSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        green_mask = cv2.inRange(frame_HSV, GREEN_LOWER_BOUND, GREEN_UPPER_BOUND)
+        green_mask = cv2.inRange(frame_HSV, self.constants.GREEN_LOWER_BOUND, self.constants.GREEN_UPPER_BOUND)
         green_frame = cv2.bitwise_and(frame, frame, mask=green_mask)
         green_frame = cv2.cvtColor(green_frame, cv2.COLOR_BGR2GRAY)
         _, green_binary = cv2.threshold(green_frame, 127, 255, cv2.THRESH_BINARY)
@@ -233,7 +239,7 @@ class Camera:
 
         if len(contours) > 0:
             largest_contour = max(contours, key=cv2.contourArea)
-            epsilon = TOLERANCE_DEFECT_POLYGON_CONTOUR * cv2.arcLength(largest_contour, True)
+            epsilon = self.constants.TOLERANCE_DEFECT_POLYGON_CONTOUR * cv2.arcLength(largest_contour, True)
             approx = cv2.approxPolyDP(largest_contour, epsilon, True)
             if len(approx) == 3:
                 print("Green triangle detected! Press SPACE to continue")
@@ -253,7 +259,7 @@ class Camera:
         cv2.imshow("frame", frame)
         
         frame_HSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        yellow_mask = cv2.inRange(frame_HSV, YELLOW_LOWER_BOUND, YELLOW_UPPER_BOUND)
+        yellow_mask = cv2.inRange(frame_HSV, self.constants.YELLOW_LOWER_BOUND, self.constants.YELLOW_UPPER_BOUND)
         yellow_frame = cv2.bitwise_and(frame, frame, mask=yellow_mask)
         yellow_frame = cv2.cvtColor(yellow_frame, cv2.COLOR_BGR2GRAY)
         _, yellow_binary = cv2.threshold(yellow_frame, 127, 255, cv2.THRESH_BINARY)
@@ -261,7 +267,7 @@ class Camera:
 
         if len(contours) > 0:
             largest_contour = max(contours, key=cv2.contourArea)
-            epsilon = TOLERANCE_DEFECT_POLYGON_CONTOUR * cv2.arcLength(largest_contour, True)
+            epsilon = self.constants.TOLERANCE_DEFECT_POLYGON_CONTOUR * cv2.arcLength(largest_contour, True)
             approx = cv2.approxPolyDP(largest_contour, epsilon, True)
 
             if len(approx) == 6:
@@ -309,7 +315,7 @@ class Camera:
         
         # reset the sequence if no shape is detected in TIME_TO_DETECT seconds
         if self.color_sequence_index > 0 : #and self.color_sequence_index < 4
-            if time() - self.last_object_detected_time > TIME_TO_DETECT:
+            if time() - self.last_object_detected_time > self.constants.TIME_TO_DETECT:
                 print("Timed out! Resetting sequence")
                 self.reset_color_sequence()
 
