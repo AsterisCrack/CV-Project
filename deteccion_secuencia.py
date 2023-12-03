@@ -1,14 +1,14 @@
-from typing import Any
 import cv2
 import numpy as np
 from time import time
-#from picamera2 import PiCamera
+from picamera2 import PiCamera
 
 class Password_program_constants:
     """
     This class contains the constants used throughout the program.
     """
     def __init__(self) -> None:
+        import numpy as np
         # define the lower and upper bounds of the colors in the HSV color space
         self.RED_LOWER_BOUND_1 = np.array([0, 100, 20])
         self.RED_UPPER_BOUND_1 = np.array([10, 255, 255])
@@ -34,14 +34,14 @@ class Password_program_constants:
         self.SQUARE_ASPECT_RATIO_TOLERANCE = 0.05 # how far off the aspect ratio of a cuadrilateral
         # can be from 1.0 (a square) and still be considered a square. 
 
-        self.TOLERANCE_DEFECT_POLYGON_CONTOUR = 0.1 # how far off the approximation of a polygon
+        self.TOLERANCE_DEFECT_POLYGON_CONTOUR = 0.02 # how far off the approximation of a polygon
 
         self.TIME_TO_DETECT = 5 # the time in seconds the program has to detect the next shape once it has detected a shape of the pattern
 
 
 
 class Camera:
-    def __init__(self, type:str = "webcam") -> object:
+    def __init__(self, type:str = "webcam", constants: Password_program_constants = None) -> object:
         """
         Intialiser for the camera object. This object will handle the operation of the camera throughout the program.
 
@@ -52,7 +52,7 @@ class Camera:
         Returns:
             object: an object of the camera class
         """
-        self.constants = Password_program_constants()
+        self.constants = constants
         self.type = type
         self.frameWidth = 1280
         self.frameHeight = 720
@@ -61,16 +61,18 @@ class Camera:
 
 
         cam = None
-        """
+        
         if type == "pi":
+            from picamera2 import PiCamera
             cam = Picamera2()
             cam.preview_configuration.main.size=(1280, 720)
             cam.preview_configuration.main.format="RGB888"
             cam.preview_configuration.align()
             cam.configure("preview")
-            cam.start()"""
+            cam.start()
 
         if type == "webcam":
+            import cv2
             cam = cv2.VideoCapture(0)
             cam.set(3, self.frameWidth)
             cam.set(4, self.frameHeight)
@@ -165,24 +167,32 @@ class Camera:
         # find the contours in the frame
         contours, _ = cv2.findContours(red_frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-        if len(contours) > 0:
-            # find the contour with the largest area
-            largest_contour = max(contours, key=cv2.contourArea)
 
-            # approximate the contour with a polygon
-            epsilon = self.constants.TOLERANCE_DEFECT_POLYGON_CONTOUR * cv2.arcLength(largest_contour, True)
-            approx = cv2.approxPolyDP(largest_contour, epsilon, True)
+        for cnt in contours:
+            """
+            We will try to detect a red rectangle by considering all the red shapes detected in the
+            frame. We will set a constraint so that the area of the contour must be larger than 500
+            in order not to detect what we will consider to be noise. Then, we will approximate the
+            contour to a polygon and check if the polygon has 4 sides. If it does, we will check if
+            the aspect ratio of the rectangle is within the tolerance defined by the constant
+            SQUARE_ASPECT_RATIO_TOLERANCE. If it is, we will consider the shape to be a rectangle.
+            and return True. Otherwise, we will return False.
+            """
+            area = cv2.contourArea(cnt)
 
-            # check if the polygon is a rectangle
-            if len(approx) == 4:
-                # check if the aspect ratio of the rectangle is outside of the interval [0.95, 1.05]
-                x, y, w, h = cv2.boundingRect(approx)
+            if area > 500:
+                perimeter = cv2.arcLength(cnt, True)
+                approx = cv2.approxPolyDP(cnt, self.constants.TOLERANCE_DEFECT_POLYGON_CONTOUR*perimeter, True)
+                x,y,w,h = cv2.boundingRect(cnt)
+                #cv2.rectangle(frame, (x,y), (x+w, y+h), (0,255,0), 2)
+                #cv2.putText(frame, "Red object", (x,y), cv2.FONT_HERSHEY_COMPLEX, 1, (0,0,0), 1)
 
-                            
-                aspect_ratio = max(float(w) / h, float(h) / w)
-                if aspect_ratio < (1-self.constants.SQUARE_ASPECT_RATIO_TOLERANCE) or aspect_ratio > (1+self.constants.SQUARE_ASPECT_RATIO_TOLERANCE):
-                    print("Red rectangle detected! Press SPACE to continue")
-                    return True
+                if len(approx) == 4:
+                    aspect_ratio = max(float(w) / h, float(h) / w)
+                    if aspect_ratio < (1-self.constants.SQUARE_ASPECT_RATIO_TOLERANCE) or aspect_ratio > (1+self.constants.SQUARE_ASPECT_RATIO_TOLERANCE):
+                        print("Red rectangle detected! Press SPACE to continue")
+                        return True
+                    
         return False
 
     def process_blue_video(self) -> bool:
@@ -205,16 +215,30 @@ class Camera:
         _, blue_binary = cv2.threshold(blue_frame, 127, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(blue_binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-        if len(contours) > 0:
-            largest_contour = max(contours, key=cv2.contourArea)
-            epsilon = self.constants.TOLERANCE_DEFECT_POLYGON_CONTOUR * cv2.arcLength(largest_contour, True)
-            approx = cv2.approxPolyDP(largest_contour, epsilon, True)
-            if len(approx) == 4:
-                x, y, w, h = cv2.boundingRect(approx)
-                aspect_ratio = max(float(w) / h, float(h) / w)
-                if aspect_ratio > (1-self.constants.SQUARE_ASPECT_RATIO_TOLERANCE) and aspect_ratio < (1+self.constants.SQUARE_ASPECT_RATIO_TOLERANCE):
-                    print("Blue square detected! Press SPACE to continue")
-                    return True
+        for cnt in contours:
+            """
+            We will consider each contour detected in the frame. We will set a constraint so that the area 
+            of the contour must be larger than 500 in order not to detect what we will consider to be noise.
+            Then, we will approximate the contour to a polygon and check if the polygon has 4 sides. 
+            If it does, we will check if the aspect ratio of the rectangle is within the tolerance defined
+            by the constant SQUARE_ASPECT_RATIO_TOLERANCE. If it is, we will consider the shape to be a square.
+            and return True. Otherwise, we will return False.
+            """
+
+            area = cv2.contourArea(cnt)
+
+            if area > 500:
+                perimeter = cv2.arcLength(cnt, True)
+                approx = cv2.approxPolyDP(cnt, self.constants.TOLERANCE_DEFECT_POLYGON_CONTOUR*perimeter, True)
+                x,y,w,h = cv2.boundingRect(cnt)
+                #cv2.rectangle(frame, (x,y), (x+w, y+h), (0,255,0), 2)
+                #cv2.putText(frame, "Blue object", (x,y), cv2.FONT_HERSHEY_COMPLEX, 1, (0,0,0), 1)
+
+                if len(approx) == 4:
+                    aspect_ratio = max(float(w) / h, float(h) / w)
+                    if aspect_ratio > (1-self.constants.SQUARE_ASPECT_RATIO_TOLERANCE) and aspect_ratio < (1+self.constants.SQUARE_ASPECT_RATIO_TOLERANCE):
+                        print("Blue square detected! Press SPACE to continue")
+                        return True
 
         return False
 
@@ -237,13 +261,22 @@ class Camera:
         _, green_binary = cv2.threshold(green_frame, 127, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(green_binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-        if len(contours) > 0:
-            largest_contour = max(contours, key=cv2.contourArea)
-            epsilon = self.constants.TOLERANCE_DEFECT_POLYGON_CONTOUR * cv2.arcLength(largest_contour, True)
-            approx = cv2.approxPolyDP(largest_contour, epsilon, True)
-            if len(approx) == 3:
-                print("Green triangle detected! Press SPACE to continue")
-                return True
+        for cnt in contours:
+            """
+            We will consider each contour detected in the frame. We will set a constraint so that the area 
+            of the contour must be larger than 500 in order not to detect what we will consider to be noise.
+            Then, we will approximate the contour to a polygon and check if the polygon has 3 sides. 
+            If it does, we will consider the shape to be a triangle and return True. Otherwise, we will return False.
+            """
+            area = cv2.contourArea(cnt)
+
+            if area > 500:
+                perimeter = cv2.arcLength(cnt, True)
+                approx = cv2.approxPolyDP(cnt, self.constants.TOLERANCE_DEFECT_POLYGON_CONTOUR*perimeter, True)
+
+                if len(approx) == 3:
+                    print("Green triangle detected! Press SPACE to continue")
+                    return True
 
         return False
 
@@ -265,14 +298,22 @@ class Camera:
         _, yellow_binary = cv2.threshold(yellow_frame, 127, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(yellow_binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-        if len(contours) > 0:
-            largest_contour = max(contours, key=cv2.contourArea)
-            epsilon = self.constants.TOLERANCE_DEFECT_POLYGON_CONTOUR * cv2.arcLength(largest_contour, True)
-            approx = cv2.approxPolyDP(largest_contour, epsilon, True)
+        for cnt in contours:
+            """
+            We will consider each contour detected in the frame. We will set a constraint so that the area 
+            of the contour must be larger than 500 in order not to detect what we will consider to be noise.
+            Then, we will approximate the contour to a polygon and check if the polygon has 6 sides. 
+            If it does, we will consider the shape to be a hexagon and return True. Otherwise, we will return False.
+            """
+            area = cv2.contourArea(cnt)
 
-            if len(approx) == 6:
-                print("Yellow hexagon detected! Press SPACE to end the program")
-                return True
+            if area > 500:
+                perimeter = cv2.arcLength(cnt, True)
+                approx = cv2.approxPolyDP(cnt, self.constants.TOLERANCE_DEFECT_POLYGON_CONTOUR*perimeter, True)
+
+                if len(approx) == 6:
+                    print("Yellow hexagon detected! Press SPACE to continue")
+                    return True
 
         return False
 
@@ -302,6 +343,12 @@ class Camera:
             print("Looking for yellow hexagon")
             detected_shape = self.process_yellow_video()
         
+        if cv2.waitKey(1) & 0xFF == ord('r'): 
+            # resets the color sequence if the user says so.
+            cam.reset_color_sequence()
+            print("Sequence reset!")
+            detected_shape = False
+
         if detected_shape:
             if self.color_sequence_index != 3:
                 print("Press SPACE to continue")
@@ -311,8 +358,8 @@ class Camera:
             else:
                 print("Sequence complete!")
                 return False
-            
         
+
         # reset the sequence if no shape is detected in TIME_TO_DETECT seconds
         if self.color_sequence_index > 0 : #and self.color_sequence_index < 4
             if time() - self.last_object_detected_time > self.constants.TIME_TO_DETECT:
@@ -324,7 +371,7 @@ class Camera:
 
 
 if __name__ == "__main__":
-    cam = Camera(type="webcam") # type can be either "pi" or "webcam"
+    cam = Camera(type="webcam", constants=Password_program_constants()) # type can be either "pi" or "webcam"
     frame = cam.get_frame()
     cv2.imshow("frame", frame)
     
