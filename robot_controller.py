@@ -5,7 +5,6 @@ from gpiozero.pins.pigpio import PiGPIOFactory
 from simple_pid import PID
 from tracker import Tracker
 import RobotControl.remove_servo_jitter as remove_jitter
-import RobotControl.led_controller as led_controller
 import time
 import math
 
@@ -15,10 +14,7 @@ class Robot_Controller:
                  INVERT_X: bool = True, INVERT_Y: bool = True, 
                  servo_x = None, servo_y = None, 
                  pid_x = None, pid_y = None,                 
-                 
-                 COLOR: str = "blue", BRIGHTNESS: int = 20, 
-                 
-                 leds = None
+                 COLOR: str = "blue"
                  ):
         
         self.INVERT_X = INVERT_X
@@ -26,7 +22,6 @@ class Robot_Controller:
 
     
         self.COLOR = COLOR
-        self.BRIGHTNESS = BRIGHTNESS
         self.obj_detected = False
         self.start_control = False
         
@@ -37,8 +32,6 @@ class Robot_Controller:
         self.PID_x = pid_x #PID(0.1, 1, 0.005, output_limits=(-1, 1), setpoint=0, starting_output=0)
         self.PID_y = pid_y #PID(0.075, 0.75, 0.005, output_limits=(-0.5, 0.5), setpoint=0, starting_output=0)
 
-        self.leds = leds #led_controller 
-
 
     def move_robot(self, center):
         #Moves the robot to point at the center of the object
@@ -47,17 +40,16 @@ class Robot_Controller:
         if center is None:
             self.servo_x.value = 0
             self.servo_y.value = 0
-            self.leds.change_effect("breathe")
             return
         
         error_x = (center[0] - 320) / 320
         error_y = (center[1] - 240) / 240
         angle_x = self.PID_x(error_x)
         angle_y = self.PID_y(error_y)
-        
+
         #global start_control
         if not self.start_control:
-            if angle_x != -1 and angle_x != 1 and angle_y != -1 and angle_y != 1: #????
+            if angle_x != -1 and angle_x != 1 and angle_y != -1 and angle_y != 1:
                 self.start_control = True
             return
         
@@ -69,16 +61,13 @@ class Robot_Controller:
 
         self.servo_x.value = angle_x
         self.servo_y.value = angle_y
-        self.leds.change_effect("static_color")
 
-    def setup_leds_tracker(self, tracker_obj):
-        self.leds.change_brightness(self.BRIGHTNESS)
-        self.leds.change_color(self.COLOR)
-        self.leds.change_effect("breathe")
+    def setup(self, tracker_obj):
         self.tracker = tracker_obj(on_new_frame_function=self.move_robot, color=self.COLOR)
 
     def start(self, tracker_obj):
-        self.setup_leds_tracker(tracker_obj)
+        print("Tracker startup")
+        self.setup(tracker_obj)
         input("Press enter to start tracking")
         self.tracker.track()
         self.close()
@@ -89,9 +78,6 @@ class Robot_Controller:
         self.servo_y.value = 0
         self.servo_x.close()
         self.servo_y.close()
-
-
-
 
 #global obj_detected 
 #obj_detected = False
@@ -106,8 +92,7 @@ if __name__ == '__main__':
     INVERT_Y = True
     PIN_X = 22
     PIN_Y = 27
-    COLOR = "blue"
-    BRIGHTNESS = 20
+    COLOR = "red"
 
     servo_x= Servo(PIN_X, pin_factory=PinFactory, min_pulse_width=0.0005, max_pulse_width=0.0025)
     servo_y = Servo(PIN_Y, pin_factory=PinFactory, min_pulse_width=0.0005, max_pulse_width=0.0025)
@@ -122,62 +107,9 @@ if __name__ == '__main__':
     robot = Robot_Controller(INVERT_X=INVERT_X, INVERT_Y=INVERT_Y, 
                              servo_x=servo_x, servo_y=servo_y, 
                              pid_x=PID_x, pid_y=PID_y, 
-                             COLOR=COLOR, BRIGHTNESS=BRIGHTNESS,
-                             leds=led_controller)
+                             COLOR=COLOR)
 
     robot.start(Tracker)
 
-    """
-    start_control = False
-    def move_robot(center):
-        #Moves the robot to point at the center of the object
-        # center is a tuple (x, y)
-        
-        if center is None:
-            servo_x.value = 0
-            servo_y.value = 0
-            led_controller.change_effect("breathe")
-            return
-        
-        error_x = (center[0] - 320) / 320
-        error_y = (center[1] - 240) / 240
-        angle_x = PID_x(error_x)
-        angle_y = PID_y(error_y)
-        
-        global start_control
-        if not start_control:
-            if angle_x != -1 and angle_x != 1 and angle_y != -1 and angle_y != 1:
-                start_control = True
-            return
-        
-       # Invert angle
-        if INVERT_X:
-            angle_x = -angle_x
-        if INVERT_Y:
-            angle_y = -angle_y
 
-        servo_x.value = angle_x
-        servo_y.value = angle_y
-        led_controller.change_effect("static_color")"""
-"""
-   #Set up LEDs
-    led_controller.change_brightness(BRIGHTNESS)
-    led_controller.change_color(COLOR)
-    led_controller.change_effect("breathe")
-    tracker = Tracker(on_new_frame_function=move_robot, color=COLOR)
-    
-   #Wait for key when ready
-    input("Press enter to start tracking")
-
-    tracker.track()
-    
-   #Closing sequence 
-    tracker.close()
-
-    servo_x.value = 0
-    servo_y.value = 0
-
-    servo_x.close()
-    servo_y.close()
-"""
     

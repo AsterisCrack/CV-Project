@@ -155,7 +155,7 @@ class Tracker:
             self.camera.stop()
         else:
             self.camera.release()
-            cv2.destroyAllWindows()
+        cv2.destroyAllWindows()
 
     def __del__(self):
         self.close()

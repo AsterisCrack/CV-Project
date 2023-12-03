@@ -25,20 +25,8 @@ import RobotControl.remove_servo_jitter as remove_jitter
 
 if __name__ == "__main__":
     # The program starts by creating the camera object in order to detect the password.
-    tipo = "webcam" # "pi"
+    tipo = "pi" # "webcam"
     cam = Camera(type= tipo, constants=Password_program_constants())
-    frame = cam.get_frame()
-    password_loop = True
-
-    while password_loop:
-        cv2.imshow("frame", frame)
-        password_loop = cam.process_video()
-
-    cam.end_program()
-    # delete the camera object to free up memory
-    del cam
-    
-    # The password has been detected, so the tracker object is created.
     remove_jitter.remove_jitter()
     PinFactory = PiGPIOFactory()
 
@@ -47,7 +35,6 @@ if __name__ == "__main__":
     PIN_X = 22
     PIN_Y = 27
     COLOR = "blue"
-    BRIGHTNESS = 20
 
     servo_x= Servo(PIN_X, pin_factory=PinFactory, min_pulse_width=0.0005, max_pulse_width=0.0025)
     servo_y = Servo(PIN_Y, pin_factory=PinFactory, min_pulse_width=0.0005, max_pulse_width=0.0025)
@@ -56,13 +43,23 @@ if __name__ == "__main__":
     PID_x = PID(0.1, 1, 0.005, output_limits=(-1, 1), setpoint=0, starting_output=0)
     PID_y = PID(0.075, 0.75, 0.005, output_limits=(-0.5, 0.5), setpoint=0, starting_output=0)
 
+    frame = cam.get_frame()
+    password_loop = True
 
-    #global start_control
+    while password_loop:
+        cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        password_loop = cam.process_video()
+
+    cam.end_program()
+    # delete the camera object to free up memory
+    del cam
+    
+    # The password has been detected, so the tracker object is created.
     
     robot = Robot_Controller(INVERT_X=INVERT_X, INVERT_Y=INVERT_Y, 
                              servo_x=servo_x, servo_y=servo_y, 
                              pid_x=PID_x, pid_y=PID_y, 
-                             COLOR=COLOR, BRIGHTNESS=BRIGHTNESS)
+                             COLOR=COLOR)
 
     robot.start(Tracker)
 

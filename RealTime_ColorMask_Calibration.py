@@ -7,12 +7,16 @@ different colors we want to detect. It is not meant to be used in the final prog
 
 import cv2
 import numpy as np
+from picamera2 import Picamera2
 
 frameWidth = 640
 frameHeight = 480
-cap = cv2.VideoCapture(0)
-cap.set(3, frameWidth)
-cap.set(4, frameHeight)
+cap = Picamera2()
+cap.preview_configuration.main.size=(frameWidth, frameHeight)
+cap.preview_configuration.main.format="RGB888"
+cap.preview_configuration.align()
+cap.configure("preview")
+cap.start()
 
 def empty(a):
     pass
@@ -28,7 +32,7 @@ cv2.createTrackbar("VALUE Max","HSV",255,255,empty)
 
 
 while True:
-    _, img = cap.read()
+    img = cap.capture_array()
     imgHsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
 
     h_min = cv2.getTrackbarPos("HUE Min","HSV")

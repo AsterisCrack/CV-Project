@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from time import time
-from picamera2 import PiCamera
+from picamera2 import Picamera2
 
 class Password_program_constants:
     """
@@ -36,7 +36,7 @@ class Password_program_constants:
 
         self.TOLERANCE_DEFECT_POLYGON_CONTOUR = 0.02 # how far off the approximation of a polygon
 
-        self.TIME_TO_DETECT = 5 # the time in seconds the program has to detect the next shape once it has detected a shape of the pattern
+        self.TIME_TO_DETECT = 30 # the time in seconds the program has to detect the next shape once it has detected a shape of the pattern
 
 
 
@@ -63,7 +63,6 @@ class Camera:
         cam = None
         
         if type == "pi":
-            from picamera2 import PiCamera
             cam = Picamera2()
             cam.preview_configuration.main.size=(1280, 720)
             cam.preview_configuration.main.format="RGB888"
@@ -146,16 +145,16 @@ class Camera:
 
         # get the frame from the camera
         frame = self.get_frame()
-        cv2.imshow("frame", frame)
+    
+        cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
         # convert the frame to HSV color space
-        frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        frame_hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
 
         # create a mask for the red color
         mask1 = cv2.inRange(frame_hsv, self.constants.RED_LOWER_BOUND_1, self.constants.RED_UPPER_BOUND_1)
         mask2 = cv2.inRange(frame_hsv, self.constants.RED_LOWER_BOUND_2, self.constants.RED_UPPER_BOUND_2)
         mask = cv2.bitwise_or(mask1, mask2)
-
         # apply the mask to the frame
         red_frame = cv2.bitwise_and(frame, frame, mask=mask)
 
@@ -205,16 +204,16 @@ class Camera:
             bool: True if a blue square is detected, False otherwise.
         """
         frame = self.get_frame()
-        cv2.imshow("frame", frame)
+        cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
-        frame_HSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        frame_HSV = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
 
         mask = cv2.inRange(frame_HSV, self.constants.BLUE_LOWER_BOUND, self.constants.BLUE_UPPER_BOUND)
         blue_frame = cv2.bitwise_and(frame, frame, mask=mask)
         blue_frame = cv2.cvtColor(blue_frame, cv2.COLOR_BGR2GRAY)
         _, blue_binary = cv2.threshold(blue_frame, 127, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(blue_binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
+        
         for cnt in contours:
             """
             We will consider each contour detected in the frame. We will set a constraint so that the area 
@@ -233,7 +232,6 @@ class Camera:
                 x,y,w,h = cv2.boundingRect(cnt)
                 #cv2.rectangle(frame, (x,y), (x+w, y+h), (0,255,0), 2)
                 #cv2.putText(frame, "Blue object", (x,y), cv2.FONT_HERSHEY_COMPLEX, 1, (0,0,0), 1)
-
                 if len(approx) == 4:
                     aspect_ratio = max(float(w) / h, float(h) / w)
                     if aspect_ratio > (1-self.constants.SQUARE_ASPECT_RATIO_TOLERANCE) and aspect_ratio < (1+self.constants.SQUARE_ASPECT_RATIO_TOLERANCE):
@@ -252,9 +250,9 @@ class Camera:
         """
 
         frame = self.get_frame()
-        cv2.imshow("frame", frame)
+        cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
-        frame_HSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        frame_HSV = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
         green_mask = cv2.inRange(frame_HSV, self.constants.GREEN_LOWER_BOUND, self.constants.GREEN_UPPER_BOUND)
         green_frame = cv2.bitwise_and(frame, frame, mask=green_mask)
         green_frame = cv2.cvtColor(green_frame, cv2.COLOR_BGR2GRAY)
@@ -289,9 +287,9 @@ class Camera:
             bool: True if a yellow hexagon is detected, False otherwise.
         """
         frame = self.get_frame()
-        cv2.imshow("frame", frame)
+        cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         
-        frame_HSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        frame_HSV = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
         yellow_mask = cv2.inRange(frame_HSV, self.constants.YELLOW_LOWER_BOUND, self.constants.YELLOW_UPPER_BOUND)
         yellow_frame = cv2.bitwise_and(frame, frame, mask=yellow_mask)
         yellow_frame = cv2.cvtColor(yellow_frame, cv2.COLOR_BGR2GRAY)
@@ -373,11 +371,11 @@ class Camera:
 if __name__ == "__main__":
     cam = Camera(type="webcam", constants=Password_program_constants()) # type can be either "pi" or "webcam"
     frame = cam.get_frame()
-    cv2.imshow("frame", frame)
+    cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     
     main_loop = True
     while main_loop:
-        cv2.imshow("frame", frame)
+        cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         main_loop = cam.process_video() # this function will return False if the sequence is complete
 
         # if the user presses the 'q' key, end the program
